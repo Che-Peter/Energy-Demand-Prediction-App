@@ -1,0 +1,113 @@
+<?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+header("Content-Type: application/json");
+
+// Cloudinary credentials
+$cloudName = "dyp1ujw3d";
+$apiSecret = "QcCzvhTOi4SG8X-HRrW3EmOh7EA";
+
+$accountId  = $_GET['accountId'] ?? null;
+$employeeId = $_GET['employeeId'] ?? null;
+$version    = $_GET['version'] ?? null;
+
+if (!$accountId || !$employeeId || !$version) {
+    echo json_encode([
+        "success" => false,
+        "error"   => "Missing accountId, employeeId, or version"
+    ]);
+    exit;
+}
+
+// Build public ID
+$publicId = "account_$accountId/emp$employeeId";
+
+// Expire in 5 minutes
+$timestamp = time() + 300;
+
+// 🔹 Build signature string for download
+$params = [
+    "public_id" => $publicId,
+    "timestamp" => $timestamp,
+    "version"   => $version
+];
+ksort($params);
+
+$toSign = [];
+foreach ($params as $key => $value) {
+    $toSign[] = $key . "=" . $value;
+}
+$signatureBase = implode("&", $toSign);
+$signature = sha1($signatureBase . $apiSecret);
+
+// 🔹 Construct signed URL (note: using /upload/, not /private/ or /authenticated/)
+$url = "https://res.cloudinary.com/$cloudName/image/upload/v$version/$publicId.jpg"
+     . "?timestamp=$timestamp&signature=$signature";
+
+echo json_encode([
+    "success" => true,
+    "url"     => $url
+]);
+exit;
+?>
+
+
+
+<?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+header("Content-Type: application/json");
+
+// Cloudinary credentials
+$cloudName = "dyp1ujw3d";
+$apiKey    = "166756845359774";
+$apiSecret = "QcCzvhTOi4SG8X-HRrW3EmOh7EA";
+
+// Your signed upload preset name
+$uploadPreset = "biosync_signed";
+
+$accountId  = $_POST['accountId'] ?? null;
+$employeeId = $_POST['employeeId'] ?? null;
+
+if (!$accountId || !$employeeId) {
+    echo json_encode([
+        "success" => false,
+        "error"   => "Missing accountId or employeeId"
+    ]);
+    exit;
+}
+
+// Build public ID
+$publicId = "account_$accountId/emp$employeeId";
+
+// Timestamp for signing
+$timestamp = time();
+
+// Parameters to sign — only include what's required by the preset
+$params = [
+    "timestamp"      => $timestamp,
+    "upload_preset"  => $uploadPreset,
+    "public_id"      => $publicId
+];
+
+// Sort and build signature
+ksort($params);
+$toSign = [];
+foreach ($params as $key => $value) {
+    $toSign[] = $key . "=" . $value;
+}
+$signatureBase = implode("&", $toSign);
+$signature = sha1($signatureBase . $apiSecret);
+
+// Return JSON to client
+echo json_encode([
+    "success"       => true,
+    "cloudName"     => $cloudName,
+    "apiKey"        => $apiKey,
+    "publicId"      => $publicId,
+    "timestamp"     => $timestamp,
+    "signature"     => $signature,
+    "uploadPreset"  => $uploadPreset
+]);
+exit;
+?>
